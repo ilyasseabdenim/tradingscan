@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGNAL SCANNER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #080b10;
+    --bg2: #0d1117;
+    --bg3: #141b24;
+    --border: #1e2a36;
+    --text: #c8d6e5;
+    --dim: #4a5c6e;
+    --green: #00e676;
+    --green-dim: #00e67620;
+    --red: #ff4757;
+    --red-dim: #ff475720;
+    --amber: #ffc107;
+    --amber-dim: #ffc10715;
+    --blue: #29b6f6;
+    --blue-dim: #29b6f615;
+    --orange: #ff9800;
+    --orange-dim: #ff980020;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    min-height: 100vh;
+    overflow-x: hidden;
+    padding-bottom: 42px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 999; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+  }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 18px;
+    padding: 14px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .logo span { color: var(--green); }
+
+  .header-stats { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+  .stat-pill {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg3);
+    min-width: 74px;
+  }
+  .stat-pill .label { font-size: 9px; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .stat-pill .value { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .stat-pill.green .value { color: var(--green); }
+  .stat-pill.red .value { color: var(--red); }
+  .stat-pill.amber .value { color: var(--amber); }
+  .stat-pill.blue .value { color: var(--blue); }
+
+  .control-panel {
+    display: grid;
+    grid-template-columns: repeat(8, minmax(90px, 1fr));
+    gap: 10px;
+    padding: 12px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label { font-size: 9px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; }
+  select, input {
+    font-family: var(--mono); font-size: 11px;
+    padding: 7px 9px; border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--bg3); color: var(--text);
+    width: 100%;
+  }
+  select:focus, input:focus { outline: none; border-color: var(--blue); }
+
+  .run-wrap { display: flex; flex-direction: column; justify-content: end; }
+  #run-btn {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: 1px solid var(--green);
+    color: var(--bg);
+    background: var(--green);
+    border-radius: 4px;
+    padding: 8px 12px;
+    cursor: pointer;
+    min-height: 32px;
+  }
+  #run-btn:hover { filter: brightness(1.08); }
+  #run-btn:disabled { opacity: 0.55; cursor: not-allowed; filter: grayscale(1); }
+
+  .hint {
+    grid-column: 1 / -1;
+    color: var(--dim);
+    font-size: 10px;
+    line-height: 1.5;
+  }
+  .hint strong { color: var(--amber); }
+
+  .filter-bar {
+    display: flex; gap: 8px; padding: 10px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-bar label { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; margin-right: 4px; }
+  .filter-btn {
+    font-family: var(--mono); font-size: 10px;
+    padding: 4px 12px; border-radius: 3px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--dim);
+    cursor: pointer; letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .filter-btn.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .filter-btn.green.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .filter-btn.red.active { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+  .filter-btn.amber.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+  .filter-btn.orange.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+
+  .search-input { width: 170px; margin-left: auto; padding: 5px 10px; }
+
+  .table-wrap { overflow-x: auto; padding: 0 24px 24px; }
+  table { width: 100%; border-collapse: collapse; min-width: 1050px; }
+  thead th {
+    padding: 10px 12px; text-align: left;
+    font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--dim); border-bottom: 1px solid var(--border);
+    position: sticky; top: 57px; background: var(--bg);
+    white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: var(--text); }
+  thead th .sort-arrow { opacity: 0.3; }
+  thead th.sorted .sort-arrow { opacity: 1; color: var(--blue); }
+  tbody tr { border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody tr.buyish { background: rgba(0,230,118,0.04); }
+  tbody tr.sellish { background: rgba(255,71,87,0.04); }
+  tbody tr.exitish { background: rgba(255,152,0,0.05); }
+  td { padding: 9px 12px; white-space: nowrap; vertical-align: middle; }
+  .sym { font-weight: 700; font-size: 12px; color: #fff; letter-spacing: 0.04em; }
+
+  .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 3px; font-size: 10px; font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; }
+  .badge.buy { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .badge.sell { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+  .badge.ready { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber); }
+  .badge.exit { background: var(--orange-dim); color: var(--orange); border: 1px solid var(--orange); }
+  .badge.hold { background: var(--blue-dim); color: var(--blue); border: 1px solid var(--blue); }
+  .badge.wait { background: transparent; color: var(--dim); border: 1px solid var(--border); }
+  .badge.error { background: transparent; color: #555; border: 1px solid #222; }
+
+  .bar-cell { min-width: 90px; }
+  .bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .bar-track { flex: 1; height: 4px; border-radius: 2px; background: var(--border); overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s ease; }
+  .bar-fill.green { background: var(--green); }
+  .bar-fill.red { background: var(--red); }
+  .bar-num { font-size: 11px; min-width: 38px; text-align: right; }
+  .price { font-size: 12px; color: #fff; }
+  .stop-price { color: var(--red); }
+  .tp1-price { color: var(--green); }
+  .na { color: var(--border); }
+  .rsi-hot { color: var(--red); }
+  .rsi-cold { color: var(--blue); }
+  .rsi-mid { color: var(--text); }
+  .mkt-tag { display: inline-block; padding: 2px 7px; border-radius: 2px; font-size: 9px; letter-spacing: 0.06em; border: 1px solid var(--border); color: var(--dim); }
+  .mkt-tag.active { border-color: #1e3a2f; color: var(--green); }
+  .pos-long { color: var(--green); font-weight: 700; }
+  .pos-short { color: var(--red); font-weight: 700; }
+  .pos-flat { color: var(--dim); }
+  .section-divider { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--dim); padding: 6px 12px; background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+  #empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 42vh; gap: 12px; color: var(--dim); text-align: center; }
+  .spinner { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--green); animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+
+  #status-bar { position: fixed; bottom: 0; left: 0; right: 0; background: var(--bg2); border-top: 1px solid var(--border); padding: 7px 24px; display: flex; align-items: center; gap: 16px; font-size: 10px; color: var(--dim); z-index: 100; }
+  #status-bar .ok { color: var(--green); }
+  #status-bar .err { color: var(--red); }
+  #status-bar .warn { color: var(--amber); }
+  .pulse-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 6px var(--green); flex-shrink: 0; }
+  .pulse-dot.busy { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  @media (max-width: 980px) {
+    header { align-items: flex-start; flex-direction: column; }
+    .header-stats { justify-content: flex-start; }
+    .control-panel { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+    .search-input { margin-left: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">SIGNAL <span>SCANNER</span></div>
+  <div class="header-stats">
+    <div class="stat-pill green"><span class="label">Confirmed</span><span class="value" id="hdr-confirmed">—</span></div>
+    <div class="stat-pill blue"><span class="label">Active</span><span class="value" id="hdr-active">—</span></div>
+    <div class="stat-pill amber"><span class="label">Ready/Lean</span><span class="value" id="hdr-lean">—</span></div>
+    <div class="stat-pill"><span class="label">Total</span><span class="value" id="hdr-total">—</span></div>
+    <div class="stat-pill"><span class="label">Runtime</span><span class="value" id="hdr-runtime">—</span></div>
+  </div>
+</header>
+
+<section class="control-panel">
+  <div class="field">
+    <label>Entry Style</label>
+    <select id="entryMode">
+      <option>Fast 5m</option>
+      <option>Balanced</option>
+      <option>Conservative</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Session</label>
+    <select id="sessionPreset">
+      <option value="AUTO">AUTO</option>
+      <option>Crypto 24/7</option>
+      <option>US Indices RTH</option>
+      <option>US Indices Extended</option>
+      <option>Forex London/NY</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Interval</label>
+    <select id="interval">
+      <option>5m</option>
+      <option>1m</option>
+      <option>15m</option>
+      <option>30m</option>
+      <option>60m</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Range</label>
+    <select id="range">
+      <option>10d</option>
+      <option>5d</option>
+      <option>30d</option>
+      <option>60d</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Cost Preset</label>
+    <select id="costPreset">
+      <option>Tight</option>
+      <option selected>Normal</option>
+      <option>Wide</option>
+      <option>Volatile</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>HTF Filter</label>
+    <select id="useHTF">
+      <option value="true">On</option>
+      <option value="false">Off</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Optional Symbols</label>
+    <input id="symbols" placeholder="AAPL,NVDA,BTC-USD">
+  </div>
+  <div class="run-wrap">
+    <button id="run-btn">Run Scan</button>
+  </div>
+  <div class="hint">
+    <strong>Manual mode:</strong> nothing runs until you click Run Scan. The API scans once, returns results, and stops. Optional Symbols is useful for faster checks; leave it blank to scan the full list.
+  </div>
+</section>
+
+<div class="filter-bar">
+  <label>Filter:</label>
+  <button class="filter-btn active" data-filter="ALL">All</button>
+  <button class="filter-btn green" data-filter="BUY">Buy side</button>
+  <button class="filter-btn red" data-filter="SELL">Sell side</button>
+  <button class="filter-btn orange" data-filter="EXIT">Exit</button>
+  <button class="filter-btn amber" data-filter="READY">Ready/Lean</button>
+  <button class="filter-btn" data-filter="WAIT">Wait</button>
+  <button class="filter-btn" data-filter="ERROR">Error</button>
+  <input class="search-input" type="text" id="search" placeholder="Search symbol…">
+</div>
+
+<div class="table-wrap" style="padding-top:12px;">
+  <div id="empty-state">
+    <div style="font-family:var(--sans);font-size:24px;font-weight:800;color:#fff;letter-spacing:.08em;">READY</div>
+    <div>Click <strong style="color:var(--green);">Run Scan</strong> to fetch Yahoo data and calculate the Pine-aligned decision panel.</div>
+  </div>
+
+  <table id="main-table" class="hidden">
+    <thead>
+      <tr>
+        <th data-col="symbol">SYMBOL <span class="sort-arrow">↕</span></th>
+        <th data-col="decision">DECISION <span class="sort-arrow">↕</span></th>
+        <th data-col="position">POS</th>
+        <th data-col="buy_percent" class="bar-cell">BUY % <span class="sort-arrow">↕</span></th>
+        <th data-col="sell_percent" class="bar-cell">SELL % <span class="sort-arrow">↕</span></th>
+        <th data-col="confidence">CONF <span class="sort-arrow">↕</span></th>
+        <th data-col="last_price">PRICE <span class="sort-arrow">↕</span></th>
+        <th data-col="entry">ENTRY</th>
+        <th data-col="stop">STOP</th>
+        <th data-col="tp1">TP1</th>
+        <th data-col="rsi">RSI <span class="sort-arrow">↕</span></th>
+        <th data-col="market">MARKET</th>
+        <th data-col="why">WHY</th>
+        <th data-col="scan_time">SCANNED</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+</div>
+
+<div id="status-bar">
+  <div class="pulse-dot" id="pulse"></div>
+  <span id="status-text"><span class="warn">● IDLE</span> — waiting for button click</span>
+  <span style="margin-left:auto;" id="last-fetch">—</span>
+</div>
+
+<script>
+let allRows = [];
+let activeFilter = 'ALL';
+let searchTerm = '';
+let sortCol = null;
+let sortDir = 1;
+
+const btn = document.getElementById('run-btn');
+const statusText = document.getElementById('status-text');
+const pulse = document.getElementById('pulse');
+
+function buildApiUrl() {
+  const p = new URLSearchParams();
+  p.set('entryMode', document.getElementById('entryMode').value);
+  p.set('sessionPreset', document.getElementById('sessionPreset').value);
+  p.set('interval', document.getElementById('interval').value);
+  p.set('range', document.getElementById('range').value);
+  p.set('costPreset', document.getElementById('costPreset').value);
+  p.set('useHTF', document.getElementById('useHTF').value);
+  const symbols = document.getElementById('symbols').value.trim();
+  if (symbols) p.set('symbols', symbols);
+  return '/api/scan?' + p.toString();
+}
+
+async function runScan() {
+  btn.disabled = true;
+  btn.textContent = 'Scanning…';
+  pulse.classList.add('busy');
+  statusText.innerHTML = '<span class="warn">● SCANNING</span> — calling /api/scan. This can take a little while for the full list.';
+  document.getElementById('empty-state').innerHTML = '<div class="spinner"></div><div>Scanning live market data…</div><div style="font-size:10px;">Leave this tab open until the table appears.</div>';
+  document.getElementById('empty-state').classList.remove('hidden');
+
+  try {
+    const res = await fetch(buildApiUrl(), { cache: 'no-store' });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || ('HTTP ' + res.status));
+    allRows = data.rows || [];
+    updateHeader(data);
+    renderTable();
+    document.getElementById('empty-state').classList.add('hidden');
+    document.getElementById('main-table').classList.remove('hidden');
+    statusText.innerHTML = '<span class="ok">● DONE</span> — scan completed from Vercel API';
+    document.getElementById('last-fetch').textContent = 'scanned ' + new Date(data.scanned_at).toLocaleString();
+  } catch (e) {
+    statusText.innerHTML = '<span class="err">● ERROR</span> — ' + escapeHTML(e.message);
+    document.getElementById('empty-state').innerHTML = '<div style="font-family:var(--sans);font-size:22px;font-weight:800;color:var(--red);">SCAN ERROR</div><div>' + escapeHTML(e.message) + '</div><div style="font-size:10px;max-width:680px;">Try entering a few symbols like AAPL,NVDA,BTC-USD first. If that works, the full list may be hitting the function time limit.</div>';
+    document.getElementById('empty-state').classList.remove('hidden');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Run Scan';
+    pulse.classList.remove('busy');
+  }
+}
+
+function updateHeader(data) {
+  const readyLean = allRows.filter(r => ['GET READY TO BUY','GET READY TO SELL','LEAN BUY','LEAN SELL'].includes(r.decision)).length;
+  document.getElementById('hdr-confirmed').textContent = data.confirmed ?? '—';
+  document.getElementById('hdr-active').textContent = data.active_positions ?? allRows.filter(r => ['LONG','SHORT'].includes(r.position)).length;
+  document.getElementById('hdr-lean').textContent = readyLean;
+  document.getElementById('hdr-total').textContent = data.total ?? allRows.length;
+  document.getElementById('hdr-runtime').textContent = data.duration_seconds ? data.duration_seconds + 's' : '—';
+}
+
+const DECISION_ORDER = {
+  'BUY CONFIRMED':0,'SELL CONFIRMED':1,'SELL / EXIT LONG':2,'BUY / EXIT SHORT':3,
+  'TRAIL LONG':4,'TRAIL SHORT':5,'HOLD LONG':6,'HOLD SHORT':7,
+  'GET READY TO BUY':8,'GET READY TO SELL':9,'LEAN BUY':10,'LEAN SELL':11,
+  'WAIT':12,'LOADING':13,'ERROR':14
+};
+
+function decisionSide(decision) {
+  if (['BUY CONFIRMED','BUY','BUY / EXIT SHORT','HOLD LONG','TRAIL LONG'].includes(decision)) return 'BUY';
+  if (['SELL CONFIRMED','SELL','SELL / EXIT LONG','HOLD SHORT','TRAIL SHORT'].includes(decision)) return 'SELL';
+  if (['SELL / EXIT LONG','BUY / EXIT SHORT'].includes(decision)) return 'EXIT';
+  if (['GET READY TO BUY','GET READY TO SELL','LEAN BUY','LEAN SELL'].includes(decision)) return 'READY';
+  if (decision === 'ERROR') return 'ERROR';
+  return 'WAIT';
+}
+
+function filteredRows() {
+  return allRows.filter(r => {
+    const dec = r.decision || '';
+    if (activeFilter === 'BUY') {
+      if (!['BUY CONFIRMED','BUY','BUY / EXIT SHORT','HOLD LONG','TRAIL LONG','GET READY TO BUY','LEAN BUY'].includes(dec)) return false;
+    } else if (activeFilter === 'SELL') {
+      if (!['SELL CONFIRMED','SELL','SELL / EXIT LONG','HOLD SHORT','TRAIL SHORT','GET READY TO SELL','LEAN SELL'].includes(dec)) return false;
+    } else if (activeFilter === 'EXIT') {
+      if (!['SELL / EXIT LONG','BUY / EXIT SHORT'].includes(dec)) return false;
+    } else if (activeFilter === 'READY') {
+      if (!['GET READY TO BUY','GET READY TO SELL','LEAN BUY','LEAN SELL'].includes(dec)) return false;
+    } else if (activeFilter !== 'ALL') {
+      if (dec !== activeFilter) return false;
+    }
+    if (searchTerm && !String(r.symbol || '').toLowerCase().includes(searchTerm)) return false;
+    return true;
+  });
+}
+
+function renderTable() {
+  let rows = filteredRows();
+  if (sortCol) {
+    rows = [...rows].sort((a,b) => {
+      let av = a[sortCol];
+      let bv = b[sortCol];
+      if (sortCol === 'decision') { av = DECISION_ORDER[av] ?? 99; bv = DECISION_ORDER[bv] ?? 99; }
+      av = av ?? (typeof bv === 'number' ? -Infinity : '');
+      bv = bv ?? (typeof av === 'number' ? -Infinity : '');
+      if (av < bv) return -sortDir;
+      if (av > bv) return sortDir;
+      return 0;
+    });
+  }
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+  let lastSection = null;
+  for (const row of rows) {
+    const section = sectionFor(row.decision);
+    if (section !== lastSection) {
+      lastSection = section;
+      const divRow = document.createElement('tr');
+      divRow.innerHTML = `<td colspan="14"><div class="section-divider">${section}</div></td>`;
+      tbody.appendChild(divRow);
+    }
+    const tr = document.createElement('tr');
+    const side = decisionSide(row.decision);
+    if (side === 'BUY') tr.classList.add('buyish');
+    if (side === 'SELL') tr.classList.add('sellish');
+    if (['SELL / EXIT LONG','BUY / EXIT SHORT'].includes(row.decision)) tr.classList.add('exitish');
+    tr.innerHTML = `
+      <td><span class="sym">${escapeHTML(row.symbol)}</span></td>
+      <td>${badgeHTML(row.decision)}</td>
+      <td class="${posClass(row.position)}">${escapeHTML(row.position || '—')}</td>
+      <td class="bar-cell">${barHTML(row.buy_percent, 'green')}</td>
+      <td class="bar-cell">${barHTML(row.sell_percent, 'red')}</td>
+      <td><span style="color:#fff;font-weight:700">${row.confidence ?? '—'}</span></td>
+      <td class="price">${fmt(row.last_price)}</td>
+      <td class="price">${fmt(row.entry) || '<span class="na">—</span>'}</td>
+      <td class="stop-price">${fmt(row.stop) || '<span class="na">—</span>'}</td>
+      <td class="tp1-price">${fmt(row.tp1) || '<span class="na">—</span>'}</td>
+      <td>${rsiHTML(row.rsi)}</td>
+      <td>${mktHTML(row.market)}</td>
+      <td style="color:var(--dim);max-width:230px;overflow:hidden;text-overflow:ellipsis" title="${escapeHTML(row.why || '')}">${escapeHTML(row.why || '')}</td>
+      <td style="color:var(--dim)">${timeAgo(row.scan_time)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function sectionFor(dec) {
+  if (dec === 'BUY CONFIRMED' || dec === 'SELL CONFIRMED') return '★ Confirmed Entries';
+  if (dec === 'SELL / EXIT LONG' || dec === 'BUY / EXIT SHORT') return '◆ Exit Instructions';
+  if (dec === 'HOLD LONG' || dec === 'HOLD SHORT' || dec === 'TRAIL LONG' || dec === 'TRAIL SHORT') return '● Managed Positions';
+  if (dec === 'GET READY TO BUY' || dec === 'GET READY TO SELL' || dec === 'LEAN BUY' || dec === 'LEAN SELL') return '◈ Bias / Leaning';
+  if (dec === 'ERROR') return '✕ Errors / No Data';
+  return '◻ Watching';
+}
+
+function badgeHTML(dec) {
+  const icons = {
+    'BUY CONFIRMED':'🟢','SELL CONFIRMED':'🔴','BUY':'🟢','SELL':'🔴',
+    'SELL / EXIT LONG':'🟠','BUY / EXIT SHORT':'🟠',
+    'HOLD LONG':'🔵','HOLD SHORT':'🔵','TRAIL LONG':'🔵','TRAIL SHORT':'🔵',
+    'GET READY TO BUY':'🟡','GET READY TO SELL':'🟡','LEAN BUY':'🔼','LEAN SELL':'🔽',
+    'WAIT':'⏸','LOADING':'⏳','ERROR':'❌'
+  };
+  let cls = 'wait';
+  if (['BUY CONFIRMED','BUY','BUY / EXIT SHORT'].includes(dec)) cls = 'buy';
+  if (['SELL CONFIRMED','SELL','SELL / EXIT LONG'].includes(dec)) cls = 'sell';
+  if (['SELL / EXIT LONG','BUY / EXIT SHORT'].includes(dec)) cls = 'exit';
+  if (['HOLD LONG','HOLD SHORT','TRAIL LONG','TRAIL SHORT'].includes(dec)) cls = 'hold';
+  if (['GET READY TO BUY','GET READY TO SELL','LEAN BUY','LEAN SELL'].includes(dec)) cls = 'ready';
+  if (dec === 'ERROR') cls = 'error';
+  return `<span class="badge ${cls}">${icons[dec] || ''} ${escapeHTML(dec || '—')}</span>`;
+}
+
+function barHTML(val, color) {
+  if (val === null || val === undefined) return '<span class="na">—</span>';
+  const w = Math.min(Math.max(Number(val), 0), 100);
+  const cssVar = color === 'green' ? 'green' : 'red';
+  return `<div class="bar-wrap"><div class="bar-track"><div class="bar-fill ${color}" style="width:${w}%"></div></div><span class="bar-num" style="color:var(--${cssVar})">${val}</span></div>`;
+}
+
+function posClass(p) {
+  if (p === 'LONG') return 'pos-long';
+  if (p === 'SHORT') return 'pos-short';
+  return 'pos-flat';
+}
+
+function rsiHTML(v) {
+  if (v === null || v === undefined) return '<span class="na">—</span>';
+  const cls = v > 70 ? 'rsi-hot' : v < 30 ? 'rsi-cold' : 'rsi-mid';
+  return `<span class="${cls}">${v}</span>`;
+}
+
+function mktHTML(m) {
+  const active = m === 'market active';
+  return `<span class="mkt-tag ${active ? 'active' : ''}">${escapeHTML(m || '?')}</span>`;
+}
+
+function fmt(v) {
+  if (v === null || v === undefined || v === '') return '';
+  if (typeof v === 'number') return v >= 1000 ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : String(v);
+  return escapeHTML(String(v));
+}
+
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (!Number.isFinite(s)) return '—';
+  if (s < 5) return 'just now';
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  return Math.floor(s/3600) + 'h ago';
+}
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+}
+
+document.getElementById('run-btn').addEventListener('click', runScan);
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    renderTable();
+  });
+});
+document.getElementById('search').addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  renderTable();
+});
+document.querySelectorAll('thead th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortDir *= -1;
+    else { sortCol = col; sortDir = 1; }
+    document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted'));
+    th.classList.add('sorted');
+    const arrow = th.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = sortDir === 1 ? '↓' : '↑';
+    renderTable();
+  });
+});
+setInterval(() => { if (allRows.length) renderTable(); }, 15000);
+</script>
+</body>
+</html>
