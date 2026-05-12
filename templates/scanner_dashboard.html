@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIGNAL SCANNER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #080b10;
+    --bg2: #0d1117;
+    --bg3: #141b24;
+    --border: #1e2a36;
+    --text: #c8d6e5;
+    --dim: #4a5c6e;
+    --green: #00e676;
+    --green-dim: #00e67620;
+    --red: #ff4757;
+    --red-dim: #ff475720;
+    --amber: #ffc107;
+    --amber-dim: #ffc10715;
+    --blue: #29b6f6;
+    --blue-dim: #29b6f615;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCANLINES OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 999; pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 100;
+  }
+
+  .logo {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .logo span { color: var(--green); }
+
+  .header-stats {
+    display: flex; gap: 24px; align-items: center;
+  }
+
+  .stat-pill {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 4px 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg3);
+    min-width: 70px;
+  }
+  .stat-pill .label { font-size: 9px; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .stat-pill .value { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; }
+  .stat-pill.green .value { color: var(--green); }
+  .stat-pill.red .value { color: var(--red); }
+  .stat-pill.amber .value { color: var(--amber); }
+
+  .pulse-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 1.8s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.7)} }
+
+  .next-sweep {
+    font-size: 10px; color: var(--dim);
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+  }
+  .next-sweep strong { color: var(--amber); font-size: 13px; }
+
+  /* ── FILTER BAR ── */
+  .filter-bar {
+    display: flex; gap: 8px; padding: 10px 24px;
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-bar label { font-size: 10px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; margin-right: 4px; }
+
+  .filter-btn {
+    font-family: var(--mono); font-size: 10px;
+    padding: 4px 12px; border-radius: 3px;
+    border: 1px solid var(--border);
+    background: transparent; color: var(--dim);
+    cursor: pointer; letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .filter-btn.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+  .filter-btn.green.active { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+  .filter-btn.red.active { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+  .filter-btn.amber.active { background: var(--amber-dim); border-color: var(--amber); color: var(--amber); }
+
+  .search-input {
+    font-family: var(--mono); font-size: 11px;
+    padding: 4px 10px; border-radius: 3px;
+    border: 1px solid var(--border);
+    background: var(--bg3); color: var(--text);
+    width: 120px; margin-left: auto;
+  }
+  .search-input:focus { outline: none; border-color: var(--blue); }
+  .search-input::placeholder { color: var(--dim); }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; padding: 0 24px 24px; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    min-width: 900px;
+  }
+
+  thead th {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 57px;
+    background: var(--bg);
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+  }
+  thead th:hover { color: var(--text); }
+  thead th .sort-arrow { opacity: 0.3; }
+  thead th.sorted .sort-arrow { opacity: 1; color: var(--blue); }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.1s;
+  }
+  tbody tr:hover { background: var(--bg3); }
+
+  /* confirmed rows glow */
+  tbody tr.buy-confirmed  { background: rgba(0,230,118,0.04); }
+  tbody tr.sell-confirmed { background: rgba(255,71,87,0.04); }
+  tbody tr.buy-confirmed:hover  { background: rgba(0,230,118,0.08); }
+  tbody tr.sell-confirmed:hover { background: rgba(255,71,87,0.08); }
+
+  /* new-signal flash */
+  @keyframes flashRow {
+    0%   { background: rgba(255,255,100,0.18); }
+    100% { background: transparent; }
+  }
+  tbody tr.flash { animation: flashRow 1.2s ease-out; }
+
+  td {
+    padding: 9px 12px;
+    white-space: nowrap;
+    vertical-align: middle;
+  }
+
+  /* SYMBOL */
+  .sym { font-weight: 700; font-size: 12px; color: #fff; letter-spacing: 0.04em; }
+
+  /* DECISION BADGE */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 3px;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  .badge.buy-confirmed  { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+  .badge.sell-confirmed { background: var(--red-dim);   color: var(--red);   border: 1px solid var(--red); }
+  .badge.lean-buy       { background: rgba(0,230,118,0.07); color: #4ecca3; border: 1px solid #1e3a2f; }
+  .badge.lean-sell      { background: rgba(255,71,87,0.07);  color: #ff8a80; border: 1px solid #3a1e1e; }
+  .badge.wait           { background: transparent; color: var(--dim); border: 1px solid var(--border); }
+  .badge.loading        { background: transparent; color: var(--dim); border: 1px solid var(--border); }
+  .badge.error          { background: transparent; color: #555; border: 1px solid #222; }
+
+  /* BAR METERS */
+  .bar-cell { min-width: 90px; }
+  .bar-wrap { display: flex; align-items: center; gap: 6px; }
+  .bar-track {
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--border); overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+  .bar-fill.green { background: var(--green); }
+  .bar-fill.red   { background: var(--red); }
+  .bar-fill.amber { background: var(--amber); }
+  .bar-num { font-size: 11px; min-width: 34px; text-align: right; }
+
+  /* PRICE CELLS */
+  .price { font-size: 12px; color: #fff; }
+  .stop-price  { color: var(--red); }
+  .tp1-price   { color: var(--green); }
+  .na { color: var(--border); }
+
+  /* RSI */
+  .rsi-val { font-size: 11px; }
+  .rsi-hot  { color: var(--red); }
+  .rsi-cold { color: var(--blue); }
+  .rsi-mid  { color: var(--text); }
+
+  /* SESSION / MARKET tags */
+  .mkt-tag {
+    display: inline-block; padding: 2px 7px; border-radius: 2px;
+    font-size: 9px; letter-spacing: 0.06em;
+    border: 1px solid var(--border); color: var(--dim);
+  }
+  .mkt-tag.active { border-color: #1e3a2f; color: var(--green); }
+
+  /* POSITION */
+  .pos-long  { color: var(--green); font-weight: 700; }
+  .pos-short { color: var(--red);   font-weight: 700; }
+  .pos-flat  { color: var(--dim); }
+
+  /* STATUS BAR */
+  #status-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 6px 24px;
+    display: flex; align-items: center; gap: 16px;
+    font-size: 10px; color: var(--dim);
+    z-index: 100;
+  }
+  #status-bar .ok { color: var(--green); }
+  #status-bar .err { color: var(--red); }
+
+  /* LOADING STATE */
+  #loading {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 60vh; gap: 16px; color: var(--dim);
+  }
+  .spinner {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid var(--border);
+    border-top-color: var(--green);
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .section-divider {
+    font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase;
+    color: var(--dim); padding: 6px 12px;
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">SIGNAL <span>SCANNER</span></div>
+
+  <div class="header-stats">
+    <div class="stat-pill green">
+      <span class="label">Confirmed</span>
+      <span class="value" id="hdr-confirmed">—</span>
+    </div>
+    <div class="stat-pill amber">
+      <span class="label">Leaning</span>
+      <span class="value" id="hdr-lean">—</span>
+    </div>
+    <div class="stat-pill">
+      <span class="label">Total</span>
+      <span class="value" id="hdr-total">—</span>
+    </div>
+    <div class="stat-pill">
+      <span class="label">Sweep #</span>
+      <span class="value" id="hdr-sweep">—</span>
+    </div>
+    <div class="next-sweep">
+      <span>Next sweep</span>
+      <strong id="hdr-countdown">—</strong>
+    </div>
+    <div class="pulse-dot" id="pulse"></div>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <label>Filter:</label>
+  <button class="filter-btn active" data-filter="ALL">All</button>
+  <button class="filter-btn green" data-filter="BUY CONFIRMED">🟢 Buy</button>
+  <button class="filter-btn red"   data-filter="SELL CONFIRMED">🔴 Sell</button>
+  <button class="filter-btn amber" data-filter="LEAN">🔼 Lean</button>
+  <button class="filter-btn"       data-filter="WAIT">⏸ Wait</button>
+  <button class="filter-btn"       data-filter="ERROR">❌ Error</button>
+  <input class="search-input" type="text" id="search" placeholder="Search symbol…">
+</div>
+
+<!-- TABLE -->
+<div class="table-wrap" style="padding-top:12px;">
+  <div id="loading">
+    <div class="spinner"></div>
+    <div>Waiting for <code>scanner_state.json</code> …</div>
+    <div style="font-size:10px;margin-top:4px;">Run <code>python scanner_live.py</code> in the same folder</div>
+  </div>
+
+  <table id="main-table" style="display:none;">
+    <thead>
+      <tr>
+        <th data-col="symbol">SYMBOL <span class="sort-arrow">↕</span></th>
+        <th data-col="decision">DECISION <span class="sort-arrow">↕</span></th>
+        <th data-col="position">POS</th>
+        <th data-col="buy_percent" class="bar-cell">BUY % <span class="sort-arrow">↕</span></th>
+        <th data-col="sell_percent" class="bar-cell">SELL % <span class="sort-arrow">↕</span></th>
+        <th data-col="confidence">CONF <span class="sort-arrow">↕</span></th>
+        <th data-col="last_price">PRICE <span class="sort-arrow">↕</span></th>
+        <th data-col="stop">STOP</th>
+        <th data-col="tp1">TP1</th>
+        <th data-col="rsi">RSI <span class="sort-arrow">↕</span></th>
+        <th data-col="market">MARKET</th>
+        <th data-col="why">WHY</th>
+        <th data-col="scan_time">SCANNED</th>
+      </tr>
+    </thead>
+    <tbody id="table-body"></tbody>
+  </table>
+</div>
+
+<!-- STATUS BAR -->
+<div id="status-bar">
+  <div class="pulse-dot" style="width:6px;height:6px;"></div>
+  <span id="status-text">Connecting…</span>
+  <span style="margin-left:auto;" id="last-fetch">—</span>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────────────────
+let allRows = [];
+let activeFilter = 'ALL';
+let searchTerm = '';
+let sortCol = null;
+let sortDir = 1;
+let nextSweepAt = null;
+let knownSignals = {};   // symbol -> decision, to detect NEW confirmed signals
+
+// ── FETCH LOOP ─────────────────────────────────────────────────────────────
+async function fetchState() {
+  try {
+    const res = await fetch('scanner_state.json?t=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('main-table').style.display = '';
+
+    nextSweepAt = data.next_sweep_at ? new Date(data.next_sweep_at) : null;
+
+    // Header stats
+    const lean = data.rows.filter(r => r.decision==='LEAN BUY' || r.decision==='LEAN SELL').length;
+    document.getElementById('hdr-confirmed').textContent = data.confirmed;
+    document.getElementById('hdr-lean').textContent = lean;
+    document.getElementById('hdr-total').textContent = data.total;
+    document.getElementById('hdr-sweep').textContent = '#' + data.sweep;
+
+    // Detect new confirmed signals (flash them)
+    const newSignals = new Set();
+    for (const row of data.rows) {
+      const prev = knownSignals[row.symbol];
+      const isCon = row.decision==='BUY CONFIRMED' || row.decision==='SELL CONFIRMED';
+      if (isCon && prev !== row.decision) newSignals.add(row.symbol);
+      knownSignals[row.symbol] = row.decision;
+    }
+
+    allRows = data.rows;
+    renderTable(newSignals);
+
+    document.getElementById('status-text').innerHTML = '<span class="ok">● LIVE</span> — last sweep: ' + timeAgo(data.scanned_at);
+    document.getElementById('last-fetch').textContent = 'fetched ' + new Date().toLocaleTimeString();
+
+  } catch(e) {
+    document.getElementById('status-text').innerHTML = '<span class="err">● ' + e.message + '</span> — make sure scanner_live.py is running';
+  }
+}
+
+// ── RENDER ─────────────────────────────────────────────────────────────────
+const DECISION_ORDER = {
+  'BUY CONFIRMED':0,'SELL CONFIRMED':1,
+  'LEAN BUY':2,'LEAN SELL':3,
+  'WAIT':4,'LOADING':5,'ERROR':6,
+};
+
+function filteredRows() {
+  return allRows.filter(r => {
+    if (activeFilter === 'LEAN') {
+      if (r.decision !== 'LEAN BUY' && r.decision !== 'LEAN SELL') return false;
+    } else if (activeFilter !== 'ALL') {
+      if (r.decision !== activeFilter) return false;
+    }
+    if (searchTerm && !r.symbol.toLowerCase().includes(searchTerm)) return false;
+    return true;
+  });
+}
+
+function renderTable(newSignals = new Set()) {
+  let rows = filteredRows();
+
+  if (sortCol) {
+    rows = [...rows].sort((a,b) => {
+      const av = a[sortCol] ?? (typeof b[sortCol]==='number' ? -Infinity : '');
+      const bv = b[sortCol] ?? (typeof a[sortCol]==='number' ? -Infinity : '');
+      if (av < bv) return -sortDir;
+      if (av > bv) return sortDir;
+      return 0;
+    });
+  }
+
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = '';
+
+  // Section labels
+  let lastSection = null;
+
+  for (const row of rows) {
+    const section = sectionFor(row.decision);
+    if (section !== lastSection) {
+      lastSection = section;
+      const divRow = document.createElement('tr');
+      divRow.innerHTML = `<td colspan="13"><div class="section-divider">${section}</div></td>`;
+      tbody.appendChild(divRow);
+    }
+
+    const tr = document.createElement('tr');
+    if (row.decision === 'BUY CONFIRMED')  tr.className = 'buy-confirmed';
+    if (row.decision === 'SELL CONFIRMED') tr.className = 'sell-confirmed';
+    if (newSignals.has(row.symbol)) {
+      setTimeout(() => tr.classList.add('flash'), 50);
+      setTimeout(() => tr.classList.remove('flash'), 1400);
+    }
+
+    tr.innerHTML = `
+      <td><span class="sym">${row.symbol}</span></td>
+      <td>${badgeHTML(row.decision)}</td>
+      <td class="${posClass(row.position)}">${row.position}</td>
+      <td class="bar-cell">${barHTML(row.buy_percent, 'green')}</td>
+      <td class="bar-cell">${barHTML(row.sell_percent, 'red')}</td>
+      <td><span style="color:#fff;font-weight:700">${row.confidence ?? '—'}</span></td>
+      <td class="price">${fmt(row.last_price)}</td>
+      <td class="stop-price">${fmt(row.stop) || '<span class="na">—</span>'}</td>
+      <td class="tp1-price">${fmt(row.tp1) || '<span class="na">—</span>'}</td>
+      <td>${rsiHTML(row.rsi)}</td>
+      <td>${mktHTML(row.market)}</td>
+      <td style="color:var(--dim);max-width:180px;overflow:hidden;text-overflow:ellipsis">${row.why}</td>
+      <td style="color:var(--dim)">${timeAgo(row.scan_time)}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+function sectionFor(dec) {
+  if (dec === 'BUY CONFIRMED' || dec === 'SELL CONFIRMED') return '★  Confirmed Signals';
+  if (dec === 'LEAN BUY' || dec === 'LEAN SELL') return '◈  Leaning';
+  if (dec === 'WAIT' || dec === 'LOADING') return '◻  Watching';
+  return '✕  Errors / No Data';
+}
+
+function badgeHTML(dec) {
+  const cls = dec.toLowerCase().replace(/ /g,'-');
+  const icons = {
+    'BUY CONFIRMED':'🟢','SELL CONFIRMED':'🔴',
+    'LEAN BUY':'🔼','LEAN SELL':'🔽',
+    'WAIT':'⏸','LOADING':'⏳','ERROR':'❌'
+  };
+  return `<span class="badge ${cls}">${icons[dec]||''} ${dec}</span>`;
+}
+
+function barHTML(val, color) {
+  if (val === null || val === undefined) return '<span class="na">—</span>';
+  const w = Math.min(Math.max(val,0),100);
+  return `<div class="bar-wrap">
+    <div class="bar-track"><div class="bar-fill ${color}" style="width:${w}%"></div></div>
+    <span class="bar-num" style="color:var(--${color==='green'?'green':'red'})">${val}</span>
+  </div>`;
+}
+
+function posClass(p) {
+  if (p==='LONG') return 'pos-long';
+  if (p==='SHORT') return 'pos-short';
+  return 'pos-flat';
+}
+
+function rsiHTML(v) {
+  if (!v && v!==0) return '<span class="na">—</span>';
+  const cls = v>70?'rsi-hot':v<30?'rsi-cold':'rsi-mid';
+  return `<span class="rsi-val ${cls}">${v}</span>`;
+}
+
+function mktHTML(m) {
+  const active = m==='active';
+  return `<span class="mkt-tag ${active?'active':''}">${m||'?'}</span>`;
+}
+
+function fmt(v) {
+  if (v===null||v===undefined) return '';
+  if (typeof v === 'number') return v >= 1000 ? v.toLocaleString(undefined,{maximumFractionDigits:2}) : v;
+  return v;
+}
+
+function timeAgo(iso) {
+  if (!iso) return '—';
+  const s = Math.round((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 5) return 'just now';
+  if (s < 60) return s + 's ago';
+  if (s < 3600) return Math.floor(s/60) + 'm ago';
+  return Math.floor(s/3600) + 'h ago';
+}
+
+// ── COUNTDOWN ──────────────────────────────────────────────────────────────
+function updateCountdown() {
+  const el = document.getElementById('hdr-countdown');
+  if (!nextSweepAt) { el.textContent = '—'; return; }
+  const s = Math.max(0, Math.round((nextSweepAt - Date.now()) / 1000));
+  if (s === 0) { el.textContent = 'sweeping…'; return; }
+  el.textContent = s + 's';
+}
+
+// ── FILTERS ────────────────────────────────────────────────────────────────
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    renderTable();
+  });
+});
+
+document.getElementById('search').addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  renderTable();
+});
+
+// ── SORT ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('thead th[data-col]').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (!col) return;
+    if (sortCol === col) { sortDir *= -1; }
+    else { sortCol = col; sortDir = 1; }
+    document.querySelectorAll('thead th').forEach(t => t.classList.remove('sorted'));
+    th.classList.add('sorted');
+    th.querySelector('.sort-arrow').textContent = sortDir === 1 ? '↓' : '↑';
+    renderTable();
+  });
+});
+
+// ── KICK OFF ───────────────────────────────────────────────────────────────
+fetchState();
+setInterval(fetchState, 5000);       // re-fetch every 5s
+setInterval(updateCountdown, 1000);  // countdown every 1s
+setInterval(() => renderTable(), 15000);  // refresh timeAgo labels
+</script>
+</body>
+</html>
