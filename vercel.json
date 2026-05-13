@@ -1,7 +1,8 @@
 {
-  "functions": {
-    "api/scan.py": {
-      "maxDuration": 300
-    }
+  "name": "tradingview-signal-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@upstash/redis": "latest"
   }
 }
